@@ -12,14 +12,35 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r}
 library(tidyverse)
+library(lmtest)
 
 data <- read.csv("HW3Data.csv")
 ```
 
 Binary Linear regression to get determine P(voting in favor of voting yes)
 ```{r}
+yes_BLR <- glm(vote~risk + bid + NEP + income + age, data=data, family = "binomial")
 
-logodds_yes <- glm()
+summary(yes_BLR)
+
+#New Data Frame#
+risk <- c(rep(20,len=125),rep(40,len=125),rep(60,len=125),rep(80,len=125))
+bid <- c(rep(20,len=100),rep(40,len=100),rep(60,len=100),rep(80,len=100),rep(100,len=100))
+income <- c(rep("middle",len=100),rep("one_percent",len=100),rep("poor",len=100),rep("rich",len=100),rep("very_rich",len=100))
+NEP <- sample(1:60,500,replace=T) 
+age <- sample(data$age,500, replace=T)
+
+data2 <- data.frame(risk,bid,NEP,income,age)
+
+yes_logodds <- predict(yes_BLR, new_data=data2,type="link")
+yes_logodds
+
+yes_odds <- exp(yes_logodds)
+
+yes_prob <- predict(yes_BLR, new_data=data2,type="response", se.fit=TRUE)
+yes <- data.frame(yes_prob)
+
+graph_yes <- data.frame(data2,yes$fit,yes$se.fit)
 
 ```
 

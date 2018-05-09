@@ -10,3 +10,16 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 
+```{r}
+library(tidyverse)
+
+data <- read.csv("HW3Data.csv")
+```
+
+Binary Linear regression to get determine P(voting in favor of voting yes)
+```{r}
+
+logodds_yes <- glm()
+
+```
+

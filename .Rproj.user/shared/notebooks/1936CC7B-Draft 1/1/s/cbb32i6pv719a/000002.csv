@@ -1,0 +1,2 @@
+"0","data_predict <- data.frame(predict(yes_BLR, newdata=data,type=""response"", se.fit=TRUE))"
+"0","data_predicted <- data.frame(data,data_predict)"

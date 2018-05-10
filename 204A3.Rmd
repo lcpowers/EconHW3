@@ -1,0 +1,64 @@
+---
+title: "assignment 3 - Draft 1"
+author: "Claire Powers"
+date: "5/9/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+- Santa Barbara County wants to reduce the risk of whale strikes by 60%
+
+- Cost of implementation is $7 million
+
+```{r message=FALSE, warning=FALSE}
+library(tidyverse)
+data <- read_csv("HW3Data.csv")
+```
+
+####Problem 1. Show the model and interpret regression coefficients
+```{r}
+#summary(data)
+
+#home_df$City <- relevel(home_df$City, ref = "San Luis Obispo")
+#levels(home_df$City)
+
+#data$risk <- as.factor(data$risk)
+#levels(data$risk)
+
+#data$bid <- as.factor(data$bid)
+#levels(data$bid)
+
+#data$NEP <- as.numeric(data$NEP)
+#summary(data$NEP)
+
+#data$income <- as.factor(data$income)
+#levels(data$income) <- c("poor","middle","rich","very_rich","one_percent")
+#levels(data$income)
+
+#data$age <- as.factor(data$age)
+#levels(data$age)
+
+blr_all <- glm(vote ~ risk + bid + NEP + income + age, data = data, family = "binomial")
+summary(blr_all)
+```
+
+####Interpreting coefficients
+```{r}
+probabilities <- 1/(1+exp(blr_all$coefficients))
+probabilities <- data.frame(probabilities)
+```
+
+####3 arbitrary respondents
+```{r}
+a <- sample_n(data,1)
+b <- sample_n(data,1)
+c <- sample_n(data,1)
+
+pred_a <- predict(blr_all, newdata=a, type="response")
+pred_b <- predict(blr_all, newdata=b, type="response")
+pred_c <- predict(blr_all, newdata=c, type="response")
+```
+

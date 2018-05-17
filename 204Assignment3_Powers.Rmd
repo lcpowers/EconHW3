@@ -15,37 +15,39 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r message=FALSE, warning=FALSE}
 library(tidyverse)
-data <- read_csv("HW3Data-Numeric.csv")
+data <- read_csv("HW3Data_numeric.csv")
 ```
 
 ####Problem 1. Show the model and interpret regression coefficients
 ```{r}
 summary(data)
 
-data$risk <- as.numeric(data$risk)
-levels(data$risk)
+#data$risk <- as.numeric(data$risk)
+#levels(data$risk)
 
-data$bid <- as.numeric(data$bid)
-levels(data$bid)
+#data$bid <- as.numeric(data$bid)
+#levels(data$bid)
 
-data$NEP <- as.numeric(data$NEP)
-summary(data$NEP)
+#data$NEP <- as.numeric(data$NEP)
+#summary(data$NEP)
 
-data$income <- as.numeric(data$income)
+#data$income <- as.numeric(data$income)
 #levels(data$income) <- c("poor","middle","rich","very_rich","one_percent")
-levels(data$income)
+#levels(data$income)
 
-data$age <- as.numeric(data$age)
-levels(data$age)
+#data$age <- as.numeric(data$age)
+#levels(data$age)
 
 #data$vote <- as.factor(data$vote)
-
-summary(data)
 
 #Actual income
 
 whale_lm <- lm(vote ~ risk + bid + NEP + income + age, data = data)
 summary(whale_lm)
+coefs <- data.frame(whale_lm$coefficients)
+
+#options(scipen = 999)
+
 ```
 
 ####1b. Interpreting coefficients
@@ -54,7 +56,7 @@ summary(whale_lm)
 # Risk: Positive relationship
 # Bid: Negetive relationship
 # NEP: Positive relationship
-# Income: Positive relationship
+# Income: Negative relationship
 # Age: Negative relationship
 ```
 
@@ -62,19 +64,22 @@ summary(whale_lm)
 ```{r}
 summary(whale_lm)
 
-Bid <- (.5 - (0.129 + .00076758*risk + 0.0158613*NEP + 0.0034322*income - 0.0035354*age))/(-.0010409)
+#Bid <- (.5 - (0.13854599 + .00075811*risk + 0.01582197*NEP - 0.00001062*income - 0.00009776*age))/(-.00104828)
 
-bid20 <- (.5 - (0.129 + 0.00076758*20)/(-0.0010409))
-bid20
+bid4 <- (.5 - (0.13854599 + .00075811*4)/(-.00104828))
+bid4
 
-bid24 <- (.5 - (0.129 + 0.00076758*24)/(-0.0010409))
-bid24
+bid8 <- (.5 - (0.13854599 + .00075811*8)/(-.00104828))
+bid8
 
-bid24-bid20
+bid8-bid4
+
+bid0 <- (.5 - (0.13854599 + .00075811*0)/(-.00104828))
+bid0
 ```
 
 ```{r}
-##New data with all bids = $60
+##New data.frame with all bids = $60
 
 risk60 <- as.numeric(rep(60,500))
 
@@ -82,12 +87,11 @@ data1 <- data.frame(risk60,data$bid,data$vote,data$NEP,data$income,data$age)
 colnames(data1) <- c("risk","bid","vote","NEP","income","age")
 ```
 
-
 ####3. arbitrary respondents
 ```{r}
-a <- sample_n(data1,1)
-b <- sample_n(data1,1)
-c <- sample_n(data1,1)
+#a <- sample_n(data1,1)
+#b <- sample_n(data1,1)
+#c <- sample_n(data1,1)
 
 #Probability of a, b and c voting yes.
 pred_a <- predict(whale_lm, newdata=a)
@@ -96,10 +100,13 @@ pred_c <- predict(whale_lm, newdata=c)
 
 ###a,b,c
 
+
 WTPfun <- function(risk,NEP,income,age){
- bid <- (.5 - (0.129 + .00076758*risk + 0.0158613*NEP + 0.0034322*income - 0.0035354*age))/(-.0010409)
+ bid <- (.5 - (0.13854599 + .00075811*risk + 0.01582197*NEP - 0.00001062*income - 0.00009776*age))/(-.00104828)
  return(bid)
 }
+
+summary(whale_lm)
 
 WTPfun(a$risk,a$NEP,a$income,a$age)
 a
@@ -110,77 +117,52 @@ c
 ```
 
 ```{r}
-WTP <- WTPfun(data1$risk,data1$NEP,data1$income,data1$age)
-colnames(WTP) <- c("WTP")
+#Adding probabilities to the data1 data.frame
+data1$prediction <- predict(whale_lm, data = data1)
 
-summary(WTP)
+#Adding WTP to data1 data.frame
+data1$WTP <- as.numeric(WTPfun(data1$risk,data1$NEP,data1$income,data1$age))
 
-meanWTP <- mean(WTP)
+#Calculating the mean WTP
+meanWTP <- mean(data1$WTP)
 meanWTP
 ```
 
 ```{r}
+plot(data1$prediction,data1$bid)
+
+ggplot(data1, aes(x=prediction, y=bid))+
+  geom_smooth(method="lm")+
+  xlim(c(0,1))
+
+```
+
+
+```{r}
 
 Yintfun <- function(risk,NEP,income,age){
- bid <- (0 - (0.129 + .00076758*risk + 0.0158613*NEP + 0.0034322*income - 0.0035354*age))/(-.0010409)
+ bid <- (0 - (0.13854599 + .00075811*risk + 0.01582197*NEP - 0.00001062*income - 0.00009776*age))/(-.00104828)
  return(bid)
 }
 
-Yint <- Yintfun(data1$risk,data1$NEP,data1$income,data1$age)
+Yint <- as.data.frame(Yintfun(data1$risk,data1$NEP,data1$income,data1$age))
+colnames(Yint) <- c("WTP")
 Yint
 
-meanYint <- mean(Yint)
+meanYint <- mean(Yint$WTP)
+meanYint
 
-.5*(.5)*(meanYint-meanWTP)
+CS <- .5*(.5)*(meanYint-meanWTP)
+CS
 
-total_benefit <- 120.0884*150000
+total_benefit <- 119.243*150000
 total_benefit
 
-total_cost <- meanWTP*150000
-total_cost
+net_benefit <- total_benefit - 7000000
 ```
 
-
-```{r probabilities for whole data frame}
-#probability of voting yes from original data frame
-probs <- data.frame(predict(blm, newdata = data, type="response"))
-
-#Adding column with 60 risk only
-data$risk2 <- as.factor(rep("60",length.out = 500))
-
-data2 <- data %>% 
-  select("risk2","bid","vote","NEP","income","age")
-
-colnames(data2) <- c("risk","bid","vote","NEP","income","age")
-
-#Probability of yes votes with 60% reduction
-riskreduced <- data.frame(predict(blm, newdata = data2, type="response"))
-
-probabilities <- data.frame(probs,riskreduced)
-colnames(probabilities) <- c("original","risk60")
+####plots 
+```{r}
 
 ```
-
-- 20% reduction saves 5 lives
-
-```{r an interesting function}
-probs <- data.frame(logit2prob(blm$coefficients))
-```
-
-#60% risk reduction for a,b,c
-#a
-#a_2 <- data.frame(as.factor("60"),as.factor("40"),as.factor("1"),as.numeric("41"),as.factor("very_rich"),as.factor("40"))
-#colnames(a_2) <- c("risk","bid","vote","NEP","income","age") 
-
-#b
-#b_2 <- data.frame(as.factor("60"),as.factor("100"),as.factor("0"),as.numeric("31"),as.factor("middle"),as.factor("30"))
-#colnames(b_2) <- c("risk","bid","vote","NEP","income","age") 
-
-#c
-#c_2 <- data.frame(as.factor("60"),as.factor("20"),as.factor("1"),as.numeric("41"),as.factor("middle"),as.factor("50"))
-#colnames(c_2) <- c("risk","bid","vote","NEP","income","age") 
-
-#pred_a_2 <- predict(blm, newdata=a_2, type="response")
-#pred_b_2 <- predict(blm, newdata=b_2, type="response")
-#pred_c_2 <- predict(blm, newdata=c_2, type="response")
 

@@ -46,8 +46,8 @@ whale_lm <- lm(vote ~ risk + bid + NEP + income + age, data = data)
 summary(whale_lm)
 coefs <- data.frame(whale_lm$coefficients)
 
+#Numeric instead of scientific notation
 #options(scipen = 999)
-
 ```
 
 ####1b. Interpreting coefficients
@@ -66,6 +66,9 @@ summary(whale_lm)
 
 #Bid <- (.5 - (0.13854599 + .00075811*risk + 0.01582197*NEP - 0.00001062*income - 0.00009776*age))/(-.00104828)
 
+bid0 <- (.5 - (0.13854599 + .00075811*0)/(-.00104828))
+bid0
+
 bid4 <- (.5 - (0.13854599 + .00075811*4)/(-.00104828))
 bid4
 
@@ -73,14 +76,12 @@ bid8 <- (.5 - (0.13854599 + .00075811*8)/(-.00104828))
 bid8
 
 bid8-bid4
+bid4-bid0
 
-bid0 <- (.5 - (0.13854599 + .00075811*0)/(-.00104828))
-bid0
 ```
 
 ```{r}
 ##New data.frame with all bids = $60
-
 risk60 <- as.numeric(rep(60,500))
 
 data1 <- data.frame(risk60,data$bid,data$vote,data$NEP,data$income,data$age)
@@ -89,9 +90,9 @@ colnames(data1) <- c("risk","bid","vote","NEP","income","age")
 
 ####3. arbitrary respondents
 ```{r}
-#a <- sample_n(data1,1)
-#b <- sample_n(data1,1)
-#c <- sample_n(data1,1)
+a <- sample_n(data1,1)
+b <- sample_n(data1,1)
+c <- sample_n(data1,1)
 
 #Probability of a, b and c voting yes.
 pred_a <- predict(whale_lm, newdata=a)
@@ -99,8 +100,6 @@ pred_b <- predict(whale_lm, newdata=b)
 pred_c <- predict(whale_lm, newdata=c)
 
 ###a,b,c
-
-
 WTPfun <- function(risk,NEP,income,age){
  bid <- (.5 - (0.13854599 + .00075811*risk + 0.01582197*NEP - 0.00001062*income - 0.00009776*age))/(-.00104828)
  return(bid)
@@ -108,17 +107,17 @@ WTPfun <- function(risk,NEP,income,age){
 
 summary(whale_lm)
 
-WTPfun(a$risk,a$NEP,a$income,a$age)
+a_wtp <- WTPfun(a$risk,a$NEP,a$income,a$age)
 a
-WTPfun(b$risk,b$NEP,b$income,b$age)
+b_wtp <- WTPfun(b$risk,b$NEP,b$income,b$age)
 b
-WTPfun(c$risk,c$NEP,c$income,c$age)
+c_wtp <- WTPfun(c$risk,c$NEP,c$income,c$age)
 c
 ```
 
 ```{r}
 #Adding probabilities to the data1 data.frame
-data1$prediction <- predict(whale_lm, data = data1)
+data1$probability <- predict(whale_lm, data = data1)
 
 #Adding WTP to data1 data.frame
 data1$WTP <- as.numeric(WTPfun(data1$risk,data1$NEP,data1$income,data1$age))
@@ -129,12 +128,10 @@ meanWTP
 ```
 
 ```{r}
-plot(data1$prediction,data1$bid)
+#plot(data1$prediction,data1$bid)
 
 ggplot(data1, aes(x=prediction, y=bid))+
-  geom_smooth(method="lm")+
-  xlim(c(0,1))
-
+  geom_smooth(method="lm")
 ```
 
 
@@ -152,17 +149,36 @@ Yint
 meanYint <- mean(Yint$WTP)
 meanYint
 
-CS <- .5*(.5)*(meanYint-meanWTP)
-CS
+#CS <- .5*(.5)*(meanYint-meanWTP)
+#CS
 
+total_benefit <- meanWTP*150000
 total_benefit <- 119.243*150000
 total_benefit
 
 net_benefit <- total_benefit - 7000000
+net_benefit
 ```
 
-####plots 
+####7. Carbon credit 
 ```{r}
+#60% risk reduction --> $1000 and 20 fewer tons of CO2
+#$Z price for a carbon credit
+
+carbon_credit <- 1000/20
+carbon_credit
+```
+####8. Carbon credit price is exactly Z
+```{r}
+#15 whales will be saved because we will achieve the 60% risk redution: 4% reduction --> 1 whale saved
+
+whales_saved <- 60/4
+
+```
+
+```{r}
+
+medianrisk <- 
 
 ```
 

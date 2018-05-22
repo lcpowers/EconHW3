@@ -1,0 +1,233 @@
+---
+title: "Appendix"
+author: "Claire Powers"
+date: "5/20/2018"
+output:
+  html_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r relevel, include=FALSE}
+library(tidyverse)
+library(stargazer)
+df <- read_csv("HW3Data.csv")
+
+df$income <- as.factor(df$income)
+levels(df$income)
+
+df$age <- as.factor(df$age)
+levels(df$age)
+
+df$income <- factor(df$income, levels=c("poor","middle","rich","very_rich","one_percent"))
+summary(df)
+```
+
+```{r initial_model, include=FALSE, results='asis'}
+whale_lm <- lm(vote ~ bid + risk + NEP + income + age, data = df)
+summary(whale_lm)
+
+df$predictions <- predict(whale_lm, data = df)
+whale_table <- as.data.frame(whale_lm$coefficients)
+```
+Regression Equation
+$$Probability(voting~yes) =  \beta_{0}-\beta_{1}*(Bid~Price)+\beta_{2}*(Risk~Reduction)+\beta_{3}*(NEP~Score)-\beta_{4}*(Middle~Income)+\beta_{5}*(High~Income) + \beta_{6}*(Very~High~Income)+\beta_{7}*(One~Percent)-\beta_{8}*(Ages~31-40)-\beta_{9}*(Ages~41-50)-\beta_{10}*(Ages~51-60)-\beta_{10}*(Over~sixty)$$
+Regression Results
+```{r stargazer_table, results='asis'}
+
+stargazer(whale_lm,type="html", 
+          dep.var.labels = c("Probability of voting in favor of VSR program"),
+          covariate.labels = c("Bid Price","Risk Reduction","NEP score","Middle Income","High Income","Very High Income","Top 1% Income","Ages 31-40","Ages 41-50","Ages 51-60","Ages 61 and over"),
+          out="regression results.htm")
+
+```
+
+Defining coefficients
+```{r coefficients}
+coefs<- data.frame(whale_lm$coefficients)
+intercept <- c(coefs[1,1])
+riskC <- c(coefs[3,1])
+bidC <- c(coefs[2,1])
+NEPC <- c(coefs[4,1])
+middleC <- c(coefs[5,1])
+richC <- c(coefs[6,1])
+veryrichC <- c(coefs[7,1])
+onepercentC <- c(coefs[8,1])
+fortyC <- c(coefs[9,1])
+fiftyC <- c(coefs[10,1])
+sixtyC <- c(coefs[11,1])
+over_sixtyC <- c(coefs[12,1]) 
+```
+
+Willingness to pay function
+```{r function}
+#Function to predict Probability of voting yes
+WTPfun <- function(risk,NEP,income,age){
+WTP <- ((-0.5 + intercept + riskC*risk + NEPC*NEP +
+           ifelse(income=="middle",middleC*1,0) +
+           ifelse(income=="rich",richC*1,0) +
+           ifelse(income=="very_rich",veryrichC*1,0) +
+           ifelse(income=="one_percent",onepercentC*1,0) +
+           ifelse(age=="40",fortyC*1,0) +
+           ifelse(age=="50",fiftyC*1,0) +
+           ifelse(age=="60",sixtyC*1,0) +
+           ifelse(age=="over_sixty",over_sixtyC*1,0))/
+          -bidC)
+
+} 
+```
+
+Value of a single prevented whale death
+```{r whale_value}
+wtp4 <- WTPfun(4,50,"middle",40)
+wtp8 <- WTPfun(8,50,"middle",40)
+
+wtp8-wtp4
+wtp4
+```
+
+New Data frame with all 60% risk reduction
+```{r df_60percent_RR}
+##New df with all bids = $60
+risk60 <- as.numeric(rep(60,500))
+df1 <- data.frame(df$bid,risk60,df$vote,df$NEP,df$income,df$age)
+colnames(df1) <- c("bid","risk","vote","NEP","income","age")
+
+#Finding predicted probabilities and WTP
+df1$probability <- predict(whale_lm, newdf = df1)
+df1$wtp <- WTPfun(df1$risk,df1$NEP,df1$income,df1$age)
+
+#Turn probabilities >1 into 1, and WTP <0 into 0
+df1$probability[df1$probability>1] <- 1
+df1$wtp[df1$wtp<0] <- 0
+```
+
+3 Random Respondants
+```{r random_respondants}
+#Three random respondants
+a <- sample_n(df1,1)
+b <- sample_n(df1,1)
+c <- sample_n(df1,1)
+
+#Probability of a, b and c voting yes.
+a$pred_a <- predict(whale_lm, newdata=a)
+b$pred_b <- predict(whale_lm, newdata=b)
+c$pred_c <- predict(whale_lm, newdata=c)
+
+a$WTP <- WTPfun(a$risk,a$NEP,a$income,a$age)
+b$WTP <- WTPfun(b$risk,b$NEP,b$income,b$age)
+c$WTP <- WTPfun(c$risk,c$NEP,c$income,c$age)
+```
+
+Net benefit
+```{r}
+#Taking mean of wtp column
+meanWTP <- mean(df1$wtp)
+meanWTP
+
+total_benefit <- meanWTP*150000
+total_benefit
+
+net_total_benefit <- total_benefit-7000000
+
+#finding median voter and solving for their WTP
+medianNEP <- median(df1$NEP)
+medianINCOME <- "rich"
+medianAGE <- "40"
+
+medianWTP <- WTPfun(60,medianNEP,medianINCOME,medianAGE)
+medianWTP
+
+total_benefit_2 <- medianWTP*150000
+
+net_total_benefit_2 <- total_benefit_2 - 7000000
+net_total_benefit
+net_total_benefit_2
+```
+
+Looking at acceptance bid price
+```{r acceptance_bid}
+##Predicted Bid Price as an alternative WTP
+bidprice_lm <- lm(bid ~ probability , data=df1)
+summary(bidprice_lm)
+
+meanBidWTP <- mean(df1$bid_predict)
+meanBidWTP
+
+bidWTP <- 93.151-47.231*.5
+bidWTP
+
+bid_benefits<- bidWTP*150000
+bid_benefits
+
+net_bid_benefits <- bid_benefits-7000000
+net_bid_benefits
+
+meanBID <- mean(df1$bid_predict)
+meanBID
+
+df1$bid_predict <- predict(bidprice_lm,df=df1)
+```
+Carbon Credit
+```{r}
+carbon_credit <- 1000/20
+carbon_credit
+
+#15 whales will be saved because we will achieve the 60% risk redution: 4% reduction --> 1 whale saved
+whales_saved <- 60/4
+```
+
+Figures
+```{r}
+
+meanPROB <- mean(df1$probability)
+meanPROB
+
+meanWTP
+meanBID
+
+ggplot(df1, aes(x=probability,y=bid))+
+  geom_smooth(method = "lm",aes(color="prediction"))+
+  geom_segment(aes(x=.5,y=40,xend=.5,yend=69.5355),color="red",linetype=2)+
+  geom_segment(aes(x = .2, y = 69.5355 , xend = .5, yend = 69.5355),color="red",linetype=2)+
+  scale_x_continuous(limits = c(.2,1), expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0))+
+  xlab("Probability of voting in favor of VSR")+
+  ylab("Bid Price ($)")+
+  scale_colour_manual(name="Bid Price", values=c("blue"))+
+  theme_classic()
+
+
+ggplot(df1, aes(x=probability, y=wtp))+
+  geom_smooth(method="lm",color="blue")+
+  scale_x_reverse(expand=c(0,0))+
+  scale_y_continuous(expand=c(0,0))+
+  geom_segment(aes(x = .5,y = -200, xend = .5,yend=90),color="red",linetype=2)+
+  geom_segment(aes(x = 1, y = 90 , xend = .5, yend = 90),color="red",linetype=2)+
+  geom_segment(aes(x = meanPROB,y = -200, xend = meanPROB,yend=meanWTP),color="grey50",linetype=3)+
+  geom_segment(aes(x = 1, y = meanWTP , xend = meanPROB, yend = meanWTP),color="grey50",linetype=3)+
+  theme_classic()
+```
+
+Randomized data.frame-may be used for figures
+```{r}
+#df.frame with randomized df for graph of model
+risk2 <- as.data.frame(sample(20:80,500,replace=TRUE))
+bid2 <- sample(0:100,500,replace = TRUE)
+vote2 <- sample(0:1,500,replace = TRUE)
+NEP2 <- sample(5:60,500,replace = TRUE)
+income2 <- sample(df1$income,500,replace = TRUE)
+age2 <- sample(df1$age,500,replace = TRUE)
+df2 <- data.frame(bid2, risk2, vote2, NEP2,income2,age2)
+colnames(df2) <- c("bid","risk","vote","NEP","income","age")
+
+df2$probability <- predict(whale_lm, newdf = df2)
+df2$WTP <- WTPfun(df2$risk,df2$NEP,df2$income,df2$age)
+
+#df2$probability[df2$probability>1] <- 1
+#df2$WTP[df2$WTP<0] <- 0
+```
+
